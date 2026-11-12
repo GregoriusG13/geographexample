@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jelajah Nusantara — Peta Interaktif Kepulauan Indonesia</title>
+<meta name="description" content="Situs interaktif dua bahasa tentang kekayaan alam dan budaya Nusantara. Dibuat dengan HTML, CSS, dan JavaScript murni.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* =========================================================================
+   JELAJAH NUSANTARA — demo ekskul Web Development
+   Struktur CSS:
+   1. Design token (variabel warna, tipografi, jarak)
+   2. Reset & dasar
+   3. Komponen umum (tombol, kartu, pita bagian)
+   4. Bagian per bagian (navbar, hero, statistik, destinasi, kuis, dll)
+   5. Responsif & aksesibilitas
+   ========================================================================= */
+
+/* ---------- 1. DESIGN TOKEN ------------------------------------------- */
+:root{
+  /* Mode terang — palet "peta bahari": kabut laut, laguna, kunyit */
+  --bg:          #E9F0F2;
+  --bg-deep:     #DCE7EA;
+  --surface:     #FFFFFF;
+  --surface-2:   #F2F7F8;
+  --ink:         #06222E;
+  --muted:       #4E6E7B;
+  --primary:     #0B6E7A;
+  --primary-ink: #FFFFFF;
+  --primary-soft:#D6EAEC;
+  --accent:      #E29A00;
+  --accent-soft: #FBEBCB;
+  --line:        rgba(6,34,46,.14);
+  --line-strong: rgba(6,34,46,.28);
+  --shadow:      0 1px 2px rgba(6,34,46,.06), 0 12px 32px -12px rgba(6,34,46,.22);
+  --grid:        rgba(6,34,46,.05);
+
+  /* Tipografi */
+  --font-display:'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body:   'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono:   'JetBrains Mono', ui-monospace, monospace;
+
+  /* Ritme */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+  --pad-section: clamp(64px, 9vw, 120px);
+  --maxw: 1160px;
+}
+
+[data-theme="dark"]{
+  --bg:          #04161E;
+  --bg-deep:     #020E14;
+  --surface:     #0A2029;
+  --surface-2:   #0F2C36;
+  --ink:         #E4F1F4;
+  --muted:       #8FAFB9;
+  --primary:     #2ED3C9;
+  --primary-ink: #04161E;
+  --primary-soft:rgba(46,211,201,.14);
+  --accent:      #FFC145;
+  --accent-soft: rgba(255,193,69,.14);
+  --line:        rgba(228,241,244,.14);
+  --line-strong: rgba(228,241,244,.3);
+  --shadow:      0 1px 2px rgba(0,0,0,.4), 0 18px 40px -16px rgba(0,0,0,.7);
+  --grid:        rgba(228,241,244,.045);
+}
+
+/* ---------- 2. RESET & DASAR ------------------------------------------ */
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+body{
+  margin:0;
+  font-family:var(--font-body);
+  font-size:16px;
+  line-height:1.65;
+  color:var(--ink);
+  background-color:var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:46px 46px;
+  transition:background-color .45s ease, color .45s ease;
+  overflow-x:hidden;
+}
+img{ max-width:100%; display:block; }
+button{ font:inherit; color:inherit; cursor:pointer; }
+a{ color:inherit; }
+
+h1,h2,h3{
+  font-family:var(--font-display);
+  font-weight:800;
+  line-height:1.05;
+  letter-spacing:-.02em;
+  margin:0 0 .4em;
+  text-wrap:balance;
+}
+h1{ font-size:clamp(2.5rem, 6.4vw, 4.6rem); }
+h2{ font-size:clamp(1.9rem, 4vw, 3rem); }
+h3{ font-size:1.15rem; letter-spacing:-.01em; }
+p{ margin:0 0 1em; }
+p:last-child{ margin-bottom:0; }
+
+.wrap{ width:min(100% - 40px, var(--maxw)); margin-inline:auto; }
+.section{ padding-block:var(--pad-section); position:relative; }
+.section--tint{ background:var(--bg-deep); }
+
+/* Eyebrow = koordinat asli lokasi yang dibahas. Bukan hiasan, tapi data. */
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  font-weight:600;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--primary);
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:18px;
+}
+.eyebrow::before{
+  content:""; width:34px; height:1px; background:var(--primary); opacity:.6;
+}
+.lede{ color:var(--muted); font-size:1.06rem; max-width:60ch; }
+.section-head{ margin-bottom:44px; }
+
+/* ---------- 3. KOMPONEN UMUM ------------------------------------------ */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  padding:13px 24px; border-radius:999px;
+  border:1px solid transparent;
+  font-weight:600; font-size:.95rem;
+  text-decoration:none;
+  transition:transform .18s ease, box-shadow .22s ease, background-color .22s, color .22s, border-color .22s;
+}
+.btn:hover{ transform:translateY(-2px); }
+.btn:active{ transform:translateY(0); }
+.btn--solid{ background:var(--primary); color:var(--primary-ink); box-shadow:var(--shadow); }
+.btn--ghost{ border-color:var(--line-strong); background:transparent; }
+.btn--ghost:hover{ border-color:var(--primary); color:var(--primary); }
+
+/* Kartu bergaya lembar peta: sudutnya ditandai tick mark */
+.chart-frame{
+  position:relative;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+}
+.chart-frame::before,
+.chart-frame::after{
+  content:""; position:absolute; width:12px; height:12px; pointer-events:none;
+  border-color:var(--primary); opacity:.55;
+}
+.chart-frame::before{ top:9px; left:9px; border-top:2px solid; border-left:2px solid; }
+.chart-frame::after{ bottom:9px; right:9px; border-bottom:2px solid; border-right:2px solid; }
+
+/* Animasi muncul saat digulir (dikendalikan IntersectionObserver di JS) */
+.reveal{ opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s cubic-bezier(.2,.7,.3,1); }
+.reveal.is-visible{ opacity:1; transform:none; }
+
+:where(a,button,input,textarea,select,[tabindex]):focus-visible{
+  outline:2px solid var(--accent); outline-offset:3px; border-radius:6px;
+}
+
+/* ---------- 4a. BILAH PROGRES BACA ------------------------------------ */
+#progress{
+  position:fixed; inset:0 auto auto 0; height:3px; width:0%;
+  background:linear-gradient(90deg, var(--primary), var(--accent));
+  z-index:120; transition:width .1s linear;
+}
+
+/* ---------- 4b. NAVBAR ------------------------------------------------- */
+.nav{
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  padding:14px 0;
+  transition:padding .3s ease, background-color .3s ease, box-shadow .3s ease, border-color .3s;
+  border-bottom:1px solid transparent;
+}
+.nav.is-stuck{
+  padding:8px 0;
+  background:color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter:blur(14px);
+  border-bottom-color:var(--line);
+  box-shadow:0 10px 30px -22px rgba(0,0,0,.6);
+}
+.nav__inner{ display:flex; align-items:center; gap:18px; }
+.brand{ display:flex; align-items:center; gap:11px; text-decoration:none; margin-right:auto; }
+.brand__mark{ width:36px; height:36px; flex:none; color:var(--primary); }
+.brand__text{ display:flex; flex-direction:column; line-height:1.1; }
+.brand__name{ font-family:var(--font-display); font-weight:800; font-size:1.02rem; letter-spacing:-.02em; }
+.brand__sub{ font-family:var(--font-mono); font-size:.6rem; letter-spacing:.18em; color:var(--muted); text-transform:uppercase; }
+
+.nav__links{ display:flex; gap:4px; list-style:none; margin:0; padding:0; }
+.nav__links a{
+  display:block; padding:9px 14px; border-radius:999px;
+  text-decoration:none; font-size:.9rem; font-weight:500; color:var(--muted);
+  transition:color .2s, background-color .2s;
+}
+.nav__links a:hover{ color:var(--ink); background:var(--surface-2); }
+.nav__links a.is-active{ color:var(--primary); background:var(--primary-soft); font-weight:600; }
+
+.nav__tools{ display:flex; align-items:center; gap:8px; }
+
+/* Sakelar bahasa */
+.lang{ display:flex; padding:3px; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:999px; }
+.lang button{
+  border:0; background:transparent; padding:6px 12px; border-radius:999px;
+  font-family:var(--font-mono); font-size:.72rem; font-weight:600; letter-spacing:.06em;
+  color:var(--muted); transition:background-color .2s, color .2s;
+}
+.lang button.is-active{ background:var(--primary); color:var(--primary-ink); }
+
+/* Sakelar tema */
+.theme-toggle{
+  width:42px; height:42px; display:grid; place-items:center;
+  border:1px solid var(--line); border-radius:50%; background:var(--surface-2);
+  transition:background-color .2s, border-color .2s, transform .3s;
+}
+.theme-toggle:hover{ border-color:var(--primary); transform:rotate(18deg); }
+.theme-toggle svg{ width:19px; height:19px; }
+[data-theme="light"] .icon-moon{ display:none; }
+[data-theme="dark"]  .icon-sun{ display:none; }
+
+.burger{ display:none; width:42px; height:42px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
+.burger span{ display:block; width:17px; height:2px; margin:3px auto; background:var(--ink); transition:transform .3s, opacity .3s; }
+.burger.is-open span:nth-child(1){ transform:translateY(5px) rotate(45deg); }
+.burger.is-open span:nth-child(2){ opacity:0; }
+.burger.is-open span:nth-child(3){ transform:translateY(-5px) rotate(-45deg); }
+
+/* ---------- 4c. HERO --------------------------------------------------- */
+.hero{ position:relative; min-height:100svh; display:flex; align-items:center; padding-top:110px; padding-bottom:70px; overflow:hidden; }
+.hero__grid{ display:grid; grid-template-columns:1.05fr .95fr; gap:50px; align-items:center; }
+.hero h1 .word{ color:var(--primary); }
+.hero__lede{ font-size:1.1rem; color:var(--muted); max-width:46ch; margin-bottom:30px; }
+.hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-bottom:38px; }
+
+/* Baris angka berjalan di hero */
+.ticker{
+  font-family:var(--font-mono); font-size:.8rem; color:var(--muted);
+  border-top:1px solid var(--line); padding-top:16px;
+  display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+}
+.ticker__value{ color:var(--accent); font-weight:600; font-size:1.05rem; }
+.ticker__cursor{ display:inline-block; width:8px; height:1.05rem; background:var(--accent); vertical-align:-2px; animation:blink 1.05s steps(2) infinite; }
+@keyframes blink{ 50%{ opacity:0; } }
+
+/* Peta kontur — elemen tanda tangan halaman ini */
+.contour{ position:relative; }
+.contour svg{ width:100%; height:auto; overflow:visible; }
+.contour__ring{ fill:none; stroke:var(--primary); stroke-width:1.1; opacity:.28; transform-origin:435px 340px; animation:breathe 9s ease-in-out infinite; }
+.contour__ring:nth-child(2){ animation-delay:-.7s; }
+.contour__ring:nth-child(3){ animation-delay:-1.4s; }
+.contour__ring:nth-child(4){ animation-delay:-2.1s; }
+.contour__ring:nth-child(5){ animation-delay:-2.8s; }
+.contour__ring:nth-child(6){ animation-delay:-3.5s; opacity:.5; stroke-width:1.6; }
+.contour__ring:nth-child(7){ animation-delay:-4.2s; opacity:.7; stroke:var(--accent); }
+@keyframes breathe{ 0%,100%{ transform:scale(var(--s,1)); } 50%{ transform:scale(calc(var(--s,1) * 1.035)); } }
+.pin{ fill:var(--accent); }
+.pin-halo{ fill:none; stroke:var(--accent); stroke-width:1.5; transform-box:fill-box; transform-origin:center; animation:ping 2.6s ease-out infinite; }
+.pin-halo.d2{ animation-delay:.9s; }
+.pin-halo.d3{ animation-delay:1.8s; }
+@keyframes ping{ 0%{ transform:scale(.4); opacity:.9; } 100%{ transform:scale(2.6); opacity:0; } }
+.contour__label{ font-family:var(--font-mono); font-size:9px; fill:var(--muted); letter-spacing:.08em; }
+
+.scroll-cue{ position:absolute; bottom:26px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:.66rem; letter-spacing:.18em; color:var(--muted); text-transform:uppercase; text-decoration:none; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.scroll-cue::after{ content:""; width:1px; height:34px; background:linear-gradient(var(--primary), transparent); animation:drop 1.9s ease-in-out infinite; }
+@keyframes drop{ 0%,100%{ transform:scaleY(.4); transform-origin:top; opacity:.4; } 50%{ transform:scaleY(1); opacity:1; } }
+
+/* ---------- 4d. STATISTIK --------------------------------------------- */
+.stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+.stat{ padding:26px 22px; }
+.stat__num{ font-family:var(--font-display); font-size:clamp(2rem,3.6vw,2.9rem); font-weight:800; letter-spacing:-.03em; color:var(--primary); line-height:1; }
+.stat__num small{ font-size:.5em; color:var(--accent); margin-left:2px; }
+.stat__label{ font-size:.9rem; color:var(--muted); margin-top:8px; }
+.stat__src{ font-family:var(--font-mono); font-size:.62rem; color:var(--muted); opacity:.7; margin-top:12px; letter-spacing:.05em; }
+
+/* ---------- 4e. DESTINASI --------------------------------------------- */
+.filters{ display:flex; flex-wrap:wrap; gap:18px; align-items:center; justify-content:space-between; margin-bottom:28px; }
+.chips{ display:flex; flex-wrap:wrap; gap:8px; }
+.chip{
+  padding:8px 16px; border-radius:999px; border:1px solid var(--line);
+  background:var(--surface); font-size:.85rem; font-weight:500; color:var(--muted);
+  transition:all .2s ease;
+}
+.chip:hover{ border-color:var(--primary); color:var(--primary); }
+.chip.is-active{ background:var(--primary); border-color:var(--primary); color:var(--primary-ink); font-weight:600; }
+
+.search{ position:relative; flex:1; min-width:230px; max-width:320px; }
+.search input{
+  width:100%; padding:11px 16px 11px 42px; border-radius:999px;
+  border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  font-family:inherit; font-size:.9rem;
+  transition:border-color .2s, box-shadow .2s;
+}
+.search input:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 4px var(--primary-soft); }
+.search svg{ position:absolute; left:15px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--muted); pointer-events:none; }
+
+.grid-dest{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:20px; }
+.card{ overflow:hidden; text-align:left; padding:0; width:100%; display:flex; flex-direction:column; background:var(--surface); transition:transform .28s cubic-bezier(.2,.7,.3,1), box-shadow .28s, border-color .28s; }
+.card:hover{ transform:translateY(-6px); box-shadow:var(--shadow); border-color:var(--primary); }
+.card__banner{ height:132px; position:relative; display:grid; place-items:center; overflow:hidden; }
+.card__banner::after{
+  content:""; position:absolute; inset:0;
+  background-image:radial-gradient(circle at 50% 120%, transparent 30%, rgba(0,0,0,.06) 31%, transparent 32%),
+                   repeating-radial-gradient(circle at 50% 120%, transparent 0 17px, rgba(255,255,255,.22) 17px 18px);
+}
+.card__emoji{ font-size:2.7rem; position:relative; z-index:1; filter:drop-shadow(0 4px 10px rgba(0,0,0,.25)); }
+.card__body{ padding:18px 20px 22px; display:flex; flex-direction:column; flex:1; }
+.card__region{ font-family:var(--font-mono); font-size:.63rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+.card h3{ margin-bottom:8px; }
+.card__desc{ font-size:.88rem; color:var(--muted); flex:1; }
+.card__coord{ font-family:var(--font-mono); font-size:.66rem; color:var(--muted); opacity:.75; margin-top:16px; padding-top:12px; border-top:1px dashed var(--line); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.card__more{ color:var(--primary); font-weight:600; }
+.empty{ padding:52px 20px; text-align:center; color:var(--muted); border:1px dashed var(--line-strong); border-radius:var(--r-md); }
+
+/* Jendela detail */
+.modal{ position:fixed; inset:0; z-index:200; display:grid; place-items:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .28s ease; }
+.modal.is-open{ opacity:1; pointer-events:auto; }
+.modal__veil{ position:absolute; inset:0; background:rgba(2,14,20,.62); backdrop-filter:blur(4px); }
+.modal__panel{
+  position:relative; width:min(560px,100%); max-height:86vh; overflow:auto;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+  padding:0; transform:translateY(20px) scale(.97); transition:transform .3s cubic-bezier(.2,.7,.3,1);
+}
+.modal.is-open .modal__panel{ transform:none; }
+.modal__banner{ height:120px; display:grid; place-items:center; font-size:3rem; }
+.modal__body{ padding:24px 28px 28px; }
+.modal__close{ position:absolute; top:14px; right:14px; width:36px; height:36px; border-radius:50%; border:0; background:rgba(2,14,20,.35); color:#fff; font-size:1.1rem; line-height:1; display:grid; place-items:center; }
+.facts{ list-style:none; padding:0; margin:18px 0 0; display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r-sm); overflow:hidden; }
+.facts li{ display:flex; justify-content:space-between; gap:16px; padding:11px 15px; background:var(--surface); font-size:.87rem; }
+.facts b{ font-family:var(--font-mono); font-weight:600; font-size:.8rem; color:var(--primary); text-align:right; }
+
+/* ---------- 4f. KUIS --------------------------------------------------- */
+.quiz{ max-width:660px; margin-inline:auto; padding:30px clamp(20px,4vw,38px) 34px; }
+.quiz__bar{ height:5px; background:var(--surface-2); border-radius:99px; overflow:hidden; margin-bottom:6px; }
+.quiz__fill{ height:100%; width:0; background:linear-gradient(90deg,var(--primary),var(--accent)); border-radius:99px; transition:width .4s ease; }
+.quiz__meta{ display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:.7rem; color:var(--muted); letter-spacing:.08em; margin-bottom:22px; }
+.quiz__q{ font-family:var(--font-display); font-size:1.35rem; font-weight:700; line-height:1.25; margin-bottom:20px; letter-spacing:-.01em; }
+.quiz__options{ display:grid; gap:10px; }
+.opt{
+  text-align:left; padding:14px 18px; border-radius:var(--r-sm);
+  border:1px solid var(--line); background:var(--surface-2); color:var(--ink);
+  font-size:.94rem; display:flex; align-items:center; gap:12px;
+  transition:border-color .2s, background-color .2s, transform .15s;
+}
+.opt:hover:not(:disabled){ border-color:var(--primary); transform:translateX(4px); }
+.opt:disabled{ cursor:default; }
+.opt__key{ font-family:var(--font-mono); font-size:.72rem; font-weight:600; width:24px; height:24px; flex:none; display:grid; place-items:center; border-radius:6px; background:var(--surface); border:1px solid var(--line); }
+.opt.is-right{ border-color:#1a9e6d; background:rgba(26,158,109,.13); }
+.opt.is-right .opt__key{ background:#1a9e6d; color:#fff; border-color:#1a9e6d; }
+.opt.is-wrong{ border-color:#d1495b; background:rgba(209,73,91,.13); }
+.opt.is-wrong .opt__key{ background:#d1495b; color:#fff; border-color:#d1495b; }
+.quiz__note{ margin-top:16px; padding:14px 16px; border-left:3px solid var(--accent); background:var(--accent-soft); border-radius:0 var(--r-sm) var(--r-sm) 0; font-size:.88rem; }
+.quiz__foot{ margin-top:20px; display:flex; justify-content:flex-end; }
+.quiz__score{ font-family:var(--font-display); font-size:3.6rem; font-weight:800; color:var(--primary); line-height:1; }
+.hidden{ display:none !important; }
+
+/* ---------- 4g. DI BALIK LAYAR (akordeon) ------------------------------ */
+.acc{ border-top:1px solid var(--line); }
+.acc__item{ border-bottom:1px solid var(--line); }
+.acc__btn{ width:100%; display:flex; align-items:center; gap:16px; padding:20px 4px; background:none; border:0; text-align:left; }
+.acc__idx{ font-family:var(--font-mono); font-size:.72rem; color:var(--accent); font-weight:600; }
+.acc__title{ font-family:var(--font-display); font-weight:700; font-size:1.05rem; flex:1; letter-spacing:-.01em; }
+.acc__sign{ width:24px; height:24px; flex:none; position:relative; }
+.acc__sign::before,.acc__sign::after{ content:""; position:absolute; inset:50% 2px auto 2px; height:2px; background:var(--primary); transition:transform .3s ease; }
+.acc__sign::after{ transform:rotate(90deg); }
+.acc__item.is-open .acc__sign::after{ transform:rotate(0); }
+.acc__panel{ overflow:hidden; height:0; transition:height .35s cubic-bezier(.2,.7,.3,1); }
+.acc__inner{ padding:0 4px 24px; color:var(--muted); font-size:.94rem; max-width:70ch; }
+pre{ margin:14px 0 0; padding:16px 18px; background:var(--bg-deep); border:1px solid var(--line); border-radius:var(--r-sm); overflow-x:auto; }
+[data-theme="dark"] pre{ background:var(--bg-deep); }
+code{ font-family:var(--font-mono); font-size:.79rem; color:var(--ink); line-height:1.7; }
+
+/* ---------- 4h. KONTAK ------------------------------------------------- */
+.contact{ display:grid; grid-template-columns:1fr 1.1fr; gap:48px; align-items:start; }
+.field{ margin-bottom:16px; }
+.field label{ display:block; font-size:.82rem; font-weight:600; margin-bottom:7px; }
+.field input,.field textarea,.field select{
+  width:100%; padding:12px 15px; border-radius:var(--r-sm);
+  border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  font-family:inherit; font-size:.93rem; transition:border-color .2s, box-shadow .2s;
+}
+.field textarea{ resize:vertical; min-height:110px; }
+.field input:focus,.field textarea:focus,.field select:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 4px var(--primary-soft); }
+.field.has-error input,.field.has-error textarea{ border-color:#d1495b; }
+.field__err{ display:none; color:#d1495b; font-size:.78rem; margin-top:6px; }
+.field.has-error .field__err{ display:block; }
+
+.toast{
+  position:fixed; left:50%; bottom:28px; transform:translate(-50%, 130%);
+  background:var(--ink); color:var(--bg); padding:13px 22px; border-radius:999px;
+  font-size:.9rem; font-weight:600; z-index:300; box-shadow:var(--shadow);
+  transition:transform .4s cubic-bezier(.2,.7,.3,1);
+}
+.toast.is-shown{ transform:translate(-50%,0); }
+
+/* ---------- 4i. FOOTER -------------------------------------------------- */
+.footer{ border-top:1px solid var(--line); padding-block:44px; }
+.footer__inner{ display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between; align-items:center; font-size:.85rem; color:var(--muted); }
+.footer__tech{ display:flex; gap:7px; flex-wrap:wrap; }
+.tag{ font-family:var(--font-mono); font-size:.68rem; padding:4px 10px; border:1px solid var(--line); border-radius:999px; }
+
+#toTop{
+  position:fixed; right:22px; bottom:22px; width:46px; height:46px; z-index:90;
+  border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--primary);
+  display:grid; place-items:center; box-shadow:var(--shadow);
+  opacity:0; pointer-events:none; transform:translateY(14px);
+  transition:opacity .3s, transform .3s;
+}
+#toTop.is-shown{ opacity:1; pointer-events:auto; transform:none; }
+
+/* ---------- 5. RESPONSIF ----------------------------------------------- */
+@media (max-width: 940px){
+  .hero__grid{ grid-template-columns:1fr; gap:36px; }
+  .contour{ order:-1; max-width:420px; }
+  .stats{ grid-template-columns:repeat(2,1fr); }
+  .contact{ grid-template-columns:1fr; gap:32px; }
+}
+@media (max-width: 820px){
+  .burger{ display:block; }
+  .nav__links{
+    position:fixed; inset:64px 14px auto 14px; flex-direction:column; gap:2px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+    padding:12px; box-shadow:var(--shadow);
+    opacity:0; pointer-events:none; transform:translateY(-12px); transition:.28s ease;
+  }
+  .nav__links.is-open{ opacity:1; pointer-events:auto; transform:none; }
+  .nav__links a{ padding:12px 14px; }
+}
+@media (max-width: 520px){
+  .stats{ grid-template-columns:1fr; }
+  .brand__sub{ display:none; }
+  .filters{ flex-direction:column; align-items:stretch; }
+  .search{ max-width:none; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  .reveal{ opacity:1; transform:none; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- ====================== NAVBAR ====================== -->
+<header class="nav" id="nav">
+  <div class="wrap nav__inner">
+    <a href="#hero" class="brand">
+      <svg class="brand__mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="1.5" opacity=".35"/>
+        <circle cx="20" cy="20" r="11.5" stroke="currentColor" stroke-width="1.5" opacity=".6"/>
+        <circle cx="20" cy="20" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M20 2v6M20 32v6M2 20h6M32 20h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="brand__text">
+        <span class="brand__name">Jelajah Nusantara</span>
+        <span class="brand__sub" data-i18n="brand.sub">Peta Interaktif</span>
+      </span>
+    </a>
+
+    <nav aria-label="Utama">
+      <ul class="nav__links" id="navLinks">
+        <li><a href="#hero"     data-i18n="nav.home">Beranda</a></li>
+        <li><a href="#data"     data-i18n="nav.data">Data</a></li>
+        <li><a href="#destinasi" data-i18n="nav.dest">Destinasi</a></li>
+        <li><a href="#kuis"     data-i18n="nav.quiz">Kuis</a></li>
+        <li><a href="#balik-layar" data-i18n="nav.behind">Di Balik Layar</a></li>
+        <li><a href="#kontak"   data-i18n="nav.contact">Kontak</a></li>
+      </ul>
+    </nav>
+
+    <div class="nav__tools">
+      <div class="lang" role="group" aria-label="Pilih bahasa">
+        <button type="button" data-lang="id" class="is-active">ID</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+
+      <button type="button" class="theme-toggle" id="themeBtn" data-i18n-aria="a11y.theme" aria-label="Ganti mode gelap atau terang">
+        <svg class="icon-sun"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.8v2.4M12 19.8v2.4M4.4 4.4l1.7 1.7M17.9 17.9l1.7 1.7M1.8 12h2.4M19.8 12h2.4M4.4 19.6l1.7-1.7M17.9 6.1l1.7-1.7"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20.5 14.3A8.6 8.6 0 1 1 9.7 3.5a6.9 6.9 0 0 0 10.8 10.8Z"/></svg>
+      </button>
+
+      <button type="button" class="burger" id="burger" aria-expanded="false" aria-controls="navLinks" data-i18n-aria="a11y.menu" aria-label="Buka menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ====================== HERO ====================== -->
+<section class="hero" id="hero">
+  <div class="wrap hero__grid">
+    <div>
+      <span class="eyebrow">06°10′S · 106°49′E</span>
+      <h1 data-i18n="hero.title">Tujuh belas ribu pulau, <span class="word">satu peta</span>.</h1>
+      <p class="hero__lede" data-i18n="hero.lede">Telusuri kekayaan alam dan budaya Indonesia lewat peta interaktif. Ganti bahasa, ganti mode gelap, uji pengetahuanmu — semuanya berjalan di satu halaman.</p>
+      <div class="hero__cta">
+        <a href="#destinasi" class="btn btn--solid" data-i18n="hero.cta1">Mulai menjelajah</a>
+        <a href="#balik-layar" class="btn btn--ghost" data-i18n="hero.cta2">Lihat cara kerjanya</a>
+      </div>
+      <div class="ticker">
+        <span data-i18n="hero.tickerLabel">Tahukah kamu:</span>
+        <span class="ticker__value" id="tickerText"></span><span class="ticker__cursor"></span>
+      </div>
+    </div>
+
+    <!-- Elemen tanda tangan: peta kontur yang "bernapas" -->
+    <div class="contour" aria-hidden="true">
+      <svg viewBox="0 0 870 680">
+        <defs>
+          <path id="isle" d="M400 120C560 110 700 200 720 320C740 440 640 540 480 560C320 580 180 500 150 380C120 260 240 130 400 120Z"/>
+        </defs>
+        <use href="#isle" class="contour__ring" style="--s:1.28"/>
+        <use href="#isle" class="contour__ring" style="--s:1.13"/>
+        <use href="#isle" class="contour__ring" style="--s:.98"/>
+        <use href="#isle" class="contour__ring" style="--s:.83"/>
+        <use href="#isle" class="contour__ring" style="--s:.66"/>
+        <use href="#isle" class="contour__ring" style="--s:.48"/>
+        <use href="#isle" class="contour__ring" style="--s:.28"/>
+
+        <circle class="pin-halo"    cx="300" cy="300" r="6"/>
+        <circle class="pin"         cx="300" cy="300" r="4"/>
+        <circle class="pin-halo d2" cx="560" cy="380" r="6"/>
+        <circle class="pin"         cx="560" cy="380" r="4"/>
+        <circle class="pin-halo d3" cx="430" cy="200" r="6"/>
+        <circle class="pin"         cx="430" cy="200" r="4"/>
+
+        <text class="contour__label" x="316" y="296">02°41′N 98°52′E</text>
+        <text class="contour__label" x="576" y="376">00°30′S 130°30′E</text>
+        <text class="contour__label" x="446" y="196">07°36′S 110°12′E</text>
+      </svg>
+    </div>
+  </div>
+
+  <a href="#data" class="scroll-cue" data-i18n="hero.scroll">Gulir</a>
+</section>
+
+<!-- ====================== DATA / STATISTIK ====================== -->
+<section class="section section--tint" id="data">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow" data-i18n="data.eyebrow">Angka Nusantara</span>
+      <h2 data-i18n="data.title">Negara kepulauan terbesar di dunia</h2>
+      <p class="lede" data-i18n="data.lede">Angka-angka ini dihitung naik dari nol saat kamu menggulir ke bagian ini — bukan gambar, tapi JavaScript yang menghitung tiap frame.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat chart-frame reveal">
+        <div class="stat__num" data-count="17508">0</div>
+        <div class="stat__label" data-i18n="data.s1">Pulau yang terdata</div>
+        <div class="stat__src">SOURCE · BIG</div>
+      </div>
+      <div class="stat chart-frame reveal">
+        <div class="stat__num" data-count="1340">0</div>
+        <div class="stat__label" data-i18n="data.s2">Kelompok suku bangsa</div>
+        <div class="stat__src">SOURCE · BPS</div>
+      </div>
+      <div class="stat chart-frame reveal">
+        <div class="stat__num" data-count="718">0</div>
+        <div class="stat__label" data-i18n="data.s3">Bahasa daerah</div>
+        <div class="stat__src">SOURCE · KEMDIKBUD</div>
+      </div>
+      <div class="stat chart-frame reveal">
+        <div class="stat__num" data-count="38">0</div>
+        <div class="stat__label" data-i18n="data.s4">Provinsi</div>
+        <div class="stat__src">SOURCE · KEMENDAGRI</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== DESTINASI ====================== -->
+<section class="section" id="destinasi">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow" data-i18n="dest.eyebrow">Delapan titik koordinat</span>
+      <h2 data-i18n="dest.title">Pilih satu tempat, lihat ceritanya</h2>
+      <p class="lede" data-i18n="dest.lede">Ketik nama tempat atau saring berdasarkan wilayah. Kartu-kartu di bawah dibuat otomatis dari satu larik data di JavaScript.</p>
+    </div>
+
+    <div class="filters reveal">
+      <div class="chips" id="chips"></div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+        <input type="search" id="searchInput" data-i18n-placeholder="dest.search" placeholder="Cari tempat…" data-i18n-aria="dest.search" aria-label="Cari tempat">
+      </div>
+    </div>
+
+    <div class="grid-dest" id="destGrid"></div>
+    <p class="empty hidden" id="destEmpty" data-i18n="dest.empty">Belum ada tempat yang cocok. Coba kata kunci lain.</p>
+  </div>
+</section>
+
+<!-- ====================== KUIS ====================== -->
+<section class="section section--tint" id="kuis">
+  <div class="wrap">
+    <div class="section-head reveal" style="text-align:center;">
+      <span class="eyebrow" data-i18n="quiz.eyebrow">Lima pertanyaan</span>
+      <h2 data-i18n="quiz.title">Seberapa kenal kamu dengan Nusantara?</h2>
+    </div>
+
+    <div class="quiz chart-frame reveal">
+      <div class="quiz__bar"><div class="quiz__fill" id="quizFill"></div></div>
+      <div class="quiz__meta">
+        <span id="quizCount">01 / 05</span>
+        <span id="quizScore">SKOR 0</span>
+      </div>
+
+      <div id="quizPlay">
+        <p class="quiz__q" id="quizQ"></p>
+        <div class="quiz__options" id="quizOpts"></div>
+        <div class="quiz__note hidden" id="quizNote"></div>
+        <div class="quiz__foot">
+          <button type="button" class="btn btn--solid hidden" id="quizNext" data-i18n="quiz.next">Lanjut</button>
+        </div>
+      </div>
+
+      <div id="quizDone" class="hidden" style="text-align:center; padding:14px 0 6px;">
+        <div class="quiz__score"><span id="finalScore">0</span><span style="opacity:.35">/5</span></div>
+        <p style="margin:14px 0 22px; color:var(--muted);" id="finalMsg"></p>
+        <button type="button" class="btn btn--ghost" id="quizRetry" data-i18n="quiz.retry">Ulangi kuis</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== DI BALIK LAYAR ====================== -->
+<section class="section" id="balik-layar">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow" data-i18n="behind.eyebrow">Untuk anggota ekskul</span>
+      <h2 data-i18n="behind.title">Lima teknik yang dipakai halaman ini</h2>
+      <p class="lede" data-i18n="behind.lede">Semua fitur di sini dibangun tanpa framework — hanya HTML, CSS, dan JavaScript. Buka tiap bagian untuk melihat potongan kodenya.</p>
+    </div>
+    <div class="acc reveal" id="acc"></div>
+  </div>
+</section>
+
+<!-- ====================== KONTAK ====================== -->
+<section class="section section--tint" id="kontak">
+  <div class="wrap contact">
+    <div class="reveal">
+      <span class="eyebrow" data-i18n="contact.eyebrow">Ekskul Web Development</span>
+      <h2 data-i18n="contact.title">Punya ide untuk proyek berikutnya?</h2>
+      <p class="lede" data-i18n="contact.lede">Tulis ide temamu di sebelah. Formulir ini memeriksa isian sebelum dikirim — contoh validasi sederhana dengan JavaScript.</p>
+      <div class="footer__tech" style="margin-top:22px;">
+        <span class="tag">HTML</span><span class="tag">CSS</span><span class="tag">JAVASCRIPT</span><span class="tag">0 FRAMEWORK</span>
+      </div>
+    </div>
+
+    <form class="chart-frame reveal" id="ideaForm" novalidate style="padding:26px 24px;">
+      <div class="field">
+        <label for="fName" data-i18n="contact.name">Nama</label>
+        <input type="text" id="fName" name="name">
+        <span class="field__err" data-i18n="contact.errName">Nama belum diisi.</span>
+      </div>
+      <div class="field">
+        <label for="fClass" data-i18n="contact.class">Kelas</label>
+        <select id="fClass" name="class">
+          <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fMail" data-i18n="contact.mail">Email</label>
+        <input type="email" id="fMail" name="mail">
+        <span class="field__err" data-i18n="contact.errMail">Format email belum benar.</span>
+      </div>
+      <div class="field">
+        <label for="fIdea" data-i18n="contact.idea">Ide proyekmu</label>
+        <textarea id="fIdea" name="idea"></textarea>
+        <span class="field__err" data-i18n="contact.errIdea">Tulis minimal 10 karakter ya.</span>
+      </div>
+      <button type="submit" class="btn btn--solid" style="width:100%;" data-i18n="contact.send">Kirim ide</button>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <span data-i18n="footer.left">Jelajah Nusantara · contoh proyek ekskul Web Development</span>
+    <span class="footer__tech">
+      <span class="tag">SMPK 4 PENABUR</span>
+      <span class="tag" id="yearTag"></span>
+    </span>
+  </div>
+</footer>
+
+<!-- Jendela detail destinasi -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal__veil" data-close></div>
+  <div class="modal__panel">
+    <div class="modal__banner" id="modalBanner"><span id="modalEmoji"></span></div>
+    <button type="button" class="modal__close" data-close data-i18n-aria="a11y.close" aria-label="Tutup">✕</button>
+    <div class="modal__body">
+      <div class="card__region" id="modalRegion"></div>
+      <h3 id="modalTitle" style="font-size:1.6rem;"></h3>
+      <p id="modalText" style="color:var(--muted); font-size:.95rem;"></p>
+      <ul class="facts" id="modalFacts"></ul>
+    </div>
+  </div>
+</div>
+
+<button type="button" id="toTop" data-i18n-aria="a11y.top" aria-label="Kembali ke atas">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   JELAJAH NUSANTARA — JavaScript
+   Urutan: data → terjemahan → fitur (tema, bahasa, navbar, statistik,
+   destinasi, kuis, akordeon, form) → jalankan
+   ========================================================================= */
+
+/* ---------- A. DATA DESTINASI ------------------------------------------
+   Satu larik (array) berisi objek. Kartu di halaman dibuat dari sini,
+   jadi menambah tempat baru cukup menambah satu objek di bawah.        */
+const DESTINASI = [
+  { id:'toba', wilayah:'sumatera', emoji:'🌊', warna:['#0B6E7A','#12A594'], koordinat:'02°41′N 98°52′E',
+    nama:{id:'Danau Toba', en:'Lake Toba'},
+    singkat:{id:'Danau vulkanik terbesar di dunia, lahir dari letusan raksasa 74.000 tahun lalu.', en:'The world\u2019s largest volcanic lake, born from a supereruption 74,000 years ago.'},
+    panjang:{id:'Di tengahnya berdiri Pulau Samosir, pusat budaya Batak dengan rumah adat beratap melengkung. Airnya berwarna biru gelap karena kedalamannya lebih dari 500 meter.', en:'At its centre sits Samosir Island, the heart of Batak culture with its curved-roof traditional houses. The water looks deep blue because the lake plunges over 500 metres.'},
+    fakta:[ {k:{id:'Provinsi',en:'Province'}, v:'Sumatera Utara'}, {k:{id:'Luas',en:'Area'}, v:'1.130 km²'}, {k:{id:'Kedalaman',en:'Depth'}, v:'505 m'} ] },
+
+  { id:'borobudur', wilayah:'jawa', emoji:'🛕', warna:['#7A5C0B','#C79A2E'], koordinat:'07°36′S 110°12′E',
+    nama:{id:'Candi Borobudur', en:'Borobudur Temple'},
+    singkat:{id:'Candi Buddha terbesar di dunia, dibangun tanpa satu pun semen.', en:'The largest Buddhist temple on earth, built without a single drop of mortar.'},
+    panjang:{id:'Dibangun abad ke-9 dari sekitar dua juta blok batu andesit yang saling mengunci. Dindingnya memuat 2.672 panel relief — bila dijajarkan panjangnya lebih dari 5 kilometer.', en:'Built in the 9th century from roughly two million interlocking andesite blocks. Its walls carry 2,672 relief panels — laid end to end they would stretch over 5 kilometres.'},
+    fakta:[ {k:{id:'Provinsi',en:'Province'}, v:'Jawa Tengah'}, {k:{id:'Dibangun',en:'Built'}, v:'± 780–840 M'}, {k:{id:'Stupa',en:'Stupas'}, v:'504'} ] },
+
+  { id:'ijen', wilayah:'jawa', emoji:'🔥', warna:['#123C6B','#2E7FC7'], koordinat:'08°03′S 114°14′E',
+    nama:{id:'Kawah Ijen', en:'Ijen Crater'},
+    singkat:{id:'Salah satu dari sedikit tempat di dunia yang punya api biru.', en:'One of the few places on earth where the fire burns blue.'},
+    panjang:{id:'Gas belerang keluar dari celah batu dengan suhu di atas 350 °C lalu terbakar menjadi nyala biru yang hanya terlihat sebelum fajar. Di dasarnya ada danau asam terbesar di dunia.', en:'Sulphuric gases escape rock vents above 350 °C and ignite into a blue flame visible only before dawn. Below sits the largest acidic crater lake in the world.'},
+    fakta:[ {k:{id:'Provinsi',en:'Province'}, v:'Jawa Timur'}, {k:{id:'Ketinggian',en:'Elevation'}, v:'2.799 m'}, {k:{id:'pH danau',en:'Lake pH'}, v:'0,5'} ] },
+
+  { id:'beratan', wilayah:'balinusra', emoji:'⛩️', warna:['#0B5A4A','#17A87F'], koordinat:'08°16′S 115°10′E',
+    nama:{id:'Pura Ulun Danu Beratan', en:'Ulun Danu Beratan Temple'},
+    singkat:{id:'Pura yang tampak mengapung di permukaan danau kaldera.', en:'A temple that appears to float on a caldera lake.'},
+    panjang:{id:'Dibangun tahun 1633 untuk memuja Dewi Danu, dewi air dan kesuburan. Air danau ini mengairi sawah-sawah subak di sekelilingnya.', en:'Built in 1633 to honour Dewi Danu, goddess of water and fertility. The lake feeds the subak rice terraces that ring it.'},
+    fakta:[ {k:{id:'Provinsi',en:'Province'}, v:'Bali'}, {k:{id:'Ketinggian',en:'Elevation'}, v:'1.240 m'}, {k:{id:'Didirikan',en:'Founded'}, v:'1633'} ] },
+
+  { id:'komodo', wilayah:'balinusra', emoji:'🦎', warna:['#6B3A0B','#C4762E'], koordinat:'08°33′S 119°29′E',
+    nama:{id:'Pulau Komodo', en:'Komodo Island'},
+    singkat:{id:'Rumah kadal terbesar yang masih hidup di bumi.', en:'Home to the largest lizard still walking the earth.'},
+    panjang:{id:'Komodo bisa mencapai panjang tiga meter dan berat 90 kilogram. Air liurnya mengandung bisa yang membuat mangsanya sulit pulih. Hewan ini hanya ada di lima pulau di Indonesia.', en:'Komodo dragons reach three metres and 90 kilograms. Their saliva carries venom that keeps prey from recovering. They live on just five islands, all Indonesian.'},
+    fakta:[ {k:{id:'Provinsi',en:'Province'}, v:'Nusa Tenggara Timur'}, {k:{id:'Populasi',en:'Population'}, v:'± 3.000'}, {k:{id:'Status',en:'Status'}, v:'UNESCO 1991'} ] },
+
+  { id:'tanjungputing', wilayah:'kalimantan', emoji:'🦧', warna:['#1F5C1A','#4EA33F'], koordinat:'02°44′S 111°56′E',
+    nama:{id:'Tanjung Puting', en:'Tanjung Puting'},
+    singkat:{id:'Hutan rawa tempat orangutan liar masih bebas berayun.', en:'A swamp forest where wild orangutans still swing free.'},
+    panjang:{id:'Dijelajahi dengan perahu kayu klotok menyusuri Sungai Sekonyer. Taman nasional ini melindungi sekitar 6.000 orangutan Kalimantan beserta bekantan berhidung panjang.', en:'Explored by wooden klotok boats along the Sekonyer River. The park shelters some 6,000 Bornean orangutans alongside long-nosed proboscis monkeys.'},
+    fakta:[ {k:{id:'Provinsi',en:'Province'}, v:'Kalimantan Tengah'}, {k:{id:'Luas',en:'Area'}, v:'4.150 km²'}, {k:{id:'Orangutan',en:'Orangutans'}, v:'± 6.000'} ] },
+
+  { id:'bunaken', wilayah:'sulawesi', emoji:'🐠', warna:['#0A4E7A','#2B9FD4'], koordinat:'01°40′N 124°45′E',
+    nama:{id:'Taman Laut Bunaken', en:'Bunaken Marine Park'},
+    singkat:{id:'Dinding karang vertikal setinggi gedung 20 lantai.', en:'A vertical coral wall as tall as a 20-storey building.'},
+    panjang:{id:'Perairan Bunaken menyimpan sekitar 390 jenis karang dan lebih dari 90 jenis ikan. Dasar lautnya turun tegak lurus hingga kedalaman 1.500 meter.', en:'Bunaken\u2019s waters hold around 390 coral species and over 90 fish species. The sea floor drops almost vertically to 1,500 metres.'},
+    fakta:[ {k:{id:'Provinsi',en:'Province'}, v:'Sulawesi Utara'}, {k:{id:'Jenis karang',en:'Coral species'}, v:'± 390'}, {k:{id:'Kedalaman',en:'Depth'}, v:'1.500 m'} ] },
+
+  { id:'rajaampat', wilayah:'papua', emoji:'🏝️', warna:['#0B4F6C','#1BA6B8'], koordinat:'00°30′S 130°30′E',
+    nama:{id:'Raja Ampat', en:'Raja Ampat'},
+    singkat:{id:'Titik dengan keanekaragaman laut tertinggi di planet ini.', en:'The richest marine biodiversity on the planet.'},
+    panjang:{id:'Gugusan 1.500 pulau karst ini berada di jantung Segitiga Terumbu Karang. Sekitar 75 persen jenis karang keras dunia bisa ditemukan di sini.', en:'This cluster of 1,500 karst islands sits at the heart of the Coral Triangle. Around 75 per cent of all known hard coral species live here.'},
+    fakta:[ {k:{id:'Provinsi',en:'Province'}, v:'Papua Barat Daya'}, {k:{id:'Pulau',en:'Islands'}, v:'± 1.500'}, {k:{id:'Jenis ikan',en:'Fish species'}, v:'1.600+'} ] }
+];
+
+const WILAYAH = [
+  { key:'semua',      label:{id:'Semua',      en:'All'} },
+  { key:'sumatera',   label:{id:'Sumatera',   en:'Sumatra'} },
+  { key:'jawa',       label:{id:'Jawa',       en:'Java'} },
+  { key:'balinusra',  label:{id:'Bali & Nusa Tenggara', en:'Bali & Nusa Tenggara'} },
+  { key:'kalimantan', label:{id:'Kalimantan', en:'Borneo'} },
+  { key:'sulawesi',   label:{id:'Sulawesi',   en:'Sulawesi'} },
+  { key:'papua',      label:{id:'Papua',      en:'Papua'} }
+];
+
+/* ---------- B. SOAL KUIS ---------------------------------------------- */
+const SOAL = [
+  { q:{id:'Berapa jumlah provinsi di Indonesia saat ini?', en:'How many provinces does Indonesia have today?'},
+    opsi:{id:['34','36','38','40'], en:['34','36','38','40']}, jawaban:2,
+    nb:{id:'Bertambah menjadi 38 setelah pemekaran empat provinsi baru di Papua.', en:'It grew to 38 after four new provinces were created in Papua.'} },
+  { q:{id:'Danau vulkanik terbesar di dunia berada di provinsi mana?', en:'The world\u2019s largest volcanic lake sits in which province?'},
+    opsi:{id:['Sumatera Barat','Sumatera Utara','Aceh','Riau'], en:['West Sumatra','North Sumatra','Aceh','Riau']}, jawaban:1,
+    nb:{id:'Danau Toba di Sumatera Utara, dengan Pulau Samosir di tengahnya.', en:'Lake Toba in North Sumatra, with Samosir Island at its centre.'} },
+  { q:{id:'Api biru yang langka bisa dilihat di kawah mana?', en:'The rare blue fire can be seen at which crater?'},
+    opsi:{id:['Kawah Ijen','Kawah Putih','Kawah Sikidang','Kawah Tangkuban Perahu'], en:['Ijen Crater','Kawah Putih','Sikidang Crater','Tangkuban Perahu']}, jawaban:0,
+    nb:{id:'Gas belerang yang terbakar menghasilkan nyala biru — hanya terlihat sebelum matahari terbit.', en:'Burning sulphuric gas makes the blue flame — visible only before sunrise.'} },
+  { q:{id:'Raja Ampat termasuk wilayah provinsi apa?', en:'Raja Ampat belongs to which province?'},
+    opsi:{id:['Maluku','Papua Selatan','Papua Barat Daya','Papua Tengah'], en:['Maluku','South Papua','Southwest Papua','Central Papua']}, jawaban:2,
+    nb:{id:'Papua Barat Daya, provinsi yang dibentuk pada 2022.', en:'Southwest Papua, a province formed in 2022.'} },
+  { q:{id:'Berapa banyak bahasa daerah yang tercatat di Indonesia?', en:'How many regional languages are recorded in Indonesia?'},
+    opsi:{id:['118','412','718','1.340'], en:['118','412','718','1,340']}, jawaban:2,
+    nb:{id:'718 bahasa daerah — sedangkan 1.340 adalah jumlah kelompok suku bangsa.', en:'718 languages — while 1,340 is the number of ethnic groups.'} }
+];
+
+/* ---------- C. TERJEMAHAN ---------------------------------------------
+   Kunci di sini dipasangkan dengan atribut data-i18n di HTML.          */
+const TEKS = {
+  id:{
+    'brand.sub':'Peta Interaktif',
+    'nav.home':'Beranda','nav.data':'Data','nav.dest':'Destinasi','nav.quiz':'Kuis','nav.behind':'Di Balik Layar','nav.contact':'Kontak',
+    'hero.title':'Tujuh belas ribu pulau, <span class="word">satu peta</span>.',
+    'hero.lede':'Telusuri kekayaan alam dan budaya Indonesia lewat peta interaktif. Ganti bahasa, ganti mode gelap, uji pengetahuanmu — semuanya berjalan di satu halaman.',
+    'hero.cta1':'Mulai menjelajah','hero.cta2':'Lihat cara kerjanya','hero.tickerLabel':'Tahukah kamu:','hero.scroll':'Gulir',
+    'data.eyebrow':'Angka Nusantara','data.title':'Negara kepulauan terbesar di dunia',
+    'data.lede':'Angka-angka ini dihitung naik dari nol saat kamu menggulir ke bagian ini — bukan gambar, tapi JavaScript yang menghitung tiap frame.',
+    'data.s1':'Pulau yang terdata','data.s2':'Kelompok suku bangsa','data.s3':'Bahasa daerah','data.s4':'Provinsi',
+    'dest.eyebrow':'Delapan titik koordinat','dest.title':'Pilih satu tempat, lihat ceritanya',
+    'dest.lede':'Ketik nama tempat atau saring berdasarkan wilayah. Kartu-kartu di bawah dibuat otomatis dari satu larik data di JavaScript.',
+    'dest.search':'Cari tempat…','dest.empty':'Belum ada tempat yang cocok. Coba kata kunci lain.','dest.more':'Lihat detail →',
+    'quiz.eyebrow':'Lima pertanyaan','quiz.title':'Seberapa kenal kamu dengan Nusantara?',
+    'quiz.next':'Lanjut','quiz.finish':'Lihat hasil','quiz.retry':'Ulangi kuis','quiz.score':'SKOR',
+    'quiz.r3':'Bagus! Kamu sudah cukup kenal Nusantara.','quiz.r5':'Sempurna. Kamu layak jadi pemandu peta ini.','quiz.r0':'Tidak apa-apa — gulir ke atas, baca lagi, lalu coba sekali lagi.',
+    'behind.eyebrow':'Untuk anggota ekskul','behind.title':'Lima teknik yang dipakai halaman ini',
+    'behind.lede':'Semua fitur di sini dibangun tanpa framework — hanya HTML, CSS, dan JavaScript. Buka tiap bagian untuk melihat potongan kodenya.',
+    'contact.eyebrow':'Ekskul Web Development','contact.title':'Punya ide untuk proyek berikutnya?',
+    'contact.lede':'Tulis ide temamu di sebelah. Formulir ini memeriksa isian sebelum dikirim — contoh validasi sederhana dengan JavaScript.',
+    'contact.name':'Nama','contact.class':'Kelas','contact.mail':'Email','contact.idea':'Ide proyekmu','contact.send':'Kirim ide',
+    'contact.errName':'Nama belum diisi.','contact.errMail':'Format email belum benar.','contact.errIdea':'Tulis minimal 10 karakter ya.',
+    'contact.ok':'Ide kamu tersimpan. Terima kasih!',
+    'footer.left':'Jelajah Nusantara · contoh proyek ekskul Web Development',
+    'a11y.theme':'Ganti mode gelap atau terang','a11y.menu':'Buka menu','a11y.close':'Tutup','a11y.top':'Kembali ke atas'
+  },
+  en:{
+    'brand.sub':'Interactive Map',
+    'nav.home':'Home','nav.data':'Data','nav.dest':'Places','nav.quiz':'Quiz','nav.behind':'Behind the Scenes','nav.contact':'Contact',
+    'hero.title':'Seventeen thousand islands, <span class="word">one map</span>.',
+    'hero.lede':'Explore Indonesia\u2019s landscapes and cultures through an interactive map. Switch the language, switch to dark mode, test what you know — all on a single page.',
+    'hero.cta1':'Start exploring','hero.cta2':'See how it works','hero.tickerLabel':'Did you know:','hero.scroll':'Scroll',
+    'data.eyebrow':'Archipelago in numbers','data.title':'The largest island nation on earth',
+    'data.lede':'These figures count up from zero the moment you scroll here — not an image, but JavaScript counting frame by frame.',
+    'data.s1':'Mapped islands','data.s2':'Ethnic groups','data.s3':'Regional languages','data.s4':'Provinces',
+    'dest.eyebrow':'Eight coordinates','dest.title':'Pick a place, read its story',
+    'dest.lede':'Type a name or filter by region. Every card below is generated from a single data array in JavaScript.',
+    'dest.search':'Search places…','dest.empty':'No place matches that. Try another keyword.','dest.more':'View details →',
+    'quiz.eyebrow':'Five questions','quiz.title':'How well do you know the archipelago?',
+    'quiz.next':'Next','quiz.finish':'See result','quiz.retry':'Play again','quiz.score':'SCORE',
+    'quiz.r3':'Nice work — you know the archipelago well.','quiz.r5':'Perfect. You could guide this map yourself.','quiz.r0':'No problem — scroll up, read again, then try once more.',
+    'behind.eyebrow':'For club members','behind.title':'Five techniques this page uses',
+    'behind.lede':'Everything here is built without a framework — just HTML, CSS and JavaScript. Open each item to see the code behind it.',
+    'contact.eyebrow':'Web Development Club','contact.title':'Got an idea for the next project?',
+    'contact.lede':'Write your theme idea on the right. The form checks each field before sending — a simple JavaScript validation example.',
+    'contact.name':'Name','contact.class':'Grade','contact.mail':'Email','contact.idea':'Your project idea','contact.send':'Send idea',
+    'contact.errName':'Please enter your name.','contact.errMail':'That email doesn\u2019t look right.','contact.errIdea':'Write at least 10 characters.',
+    'contact.ok':'Idea saved. Thank you!',
+    'footer.left':'Jelajah Nusantara · a Web Development club sample project',
+    'a11y.theme':'Switch between dark and light mode','a11y.menu':'Open menu','a11y.close':'Close','a11y.top':'Back to top'
+  }
+};
+
+const FAKTA_TICKER = {
+  id:['Indonesia punya 17.508 pulau.','Ada 718 bahasa daerah di Nusantara.','Garis pantainya sepanjang 99.083 km.','Tiga zona waktu membentang dari Sabang ke Merauke.','Sekitar 130 gunung api masih aktif.'],
+  en:['Indonesia counts 17,508 islands.','718 regional languages are spoken here.','Its coastline runs 99,083 km.','Three time zones stretch from Sabang to Merauke.','About 130 volcanoes are still active.']
+};
+
+const BALIK_LAYAR = [
+  { judul:{id:'Mengganti bahasa tanpa memuat ulang halaman', en:'Switching language without reloading'},
+    isi:{id:'Setiap teks diberi atribut <code>data-i18n</code>. JavaScript mencari semua elemen itu lalu mengganti isinya dari objek terjemahan.', en:'Every text carries a <code>data-i18n</code> attribute. JavaScript finds those elements and swaps their content from a translation object.'},
+    kode:'const TEKS = { id:{ "nav.home":"Beranda" }, en:{ "nav.home":"Home" } };\n\nfunction gantiBahasa(kode){\n  document.querySelectorAll("[data-i18n]").forEach(el =&gt; {\n    const kunci = el.dataset.i18n;\n    if (TEKS[kode][kunci]) el.innerHTML = TEKS[kode][kunci];\n  });\n  document.documentElement.lang = kode;\n}' },
+  { judul:{id:'Mode gelap dengan satu baris atribut', en:'Dark mode from a single attribute'},
+    isi:{id:'Semua warna disimpan sebagai variabel CSS. Mengubah atribut <code>data-theme</code> di tag &lt;html&gt; otomatis mengganti seluruh palet.', en:'All colours live in CSS variables. Flipping the <code>data-theme</code> attribute on &lt;html&gt; swaps the entire palette at once.'},
+    kode:':root            { --bg:#E9F0F2; --ink:#06222E; }\n[data-theme="dark"] { --bg:#04161E; --ink:#E4F1F4; }\n\nbody { background:var(--bg); color:var(--ink); }\n\n/* JavaScript */\nconst html = document.documentElement;\nhtml.dataset.theme = html.dataset.theme === "dark" ? "light" : "dark";' },
+  { judul:{id:'Animasi yang muncul saat digulir', en:'Animations that fire on scroll'},
+    isi:{id:'<code>IntersectionObserver</code> memberi tahu kita saat sebuah elemen masuk layar. Saat itu terjadi, kita tinggal menambahkan satu kelas CSS.', en:'<code>IntersectionObserver</code> tells us the moment an element enters the screen. When it does, we simply add one CSS class.'},
+    kode:'const pengamat = new IntersectionObserver((entries) =&gt; {\n  entries.forEach(e =&gt; {\n    if (e.isIntersecting) {\n      e.target.classList.add("is-visible");\n      pengamat.unobserve(e.target);\n    }\n  });\n}, { threshold: 0.15 });\n\ndocument.querySelectorAll(".reveal").forEach(el =&gt; pengamat.observe(el));' },
+  { judul:{id:'Filter dan pencarian dari satu larik data', en:'Filter and search from one data array'},
+    isi:{id:'Kartu destinasi tidak ditulis manual di HTML. Semuanya dibuat dari larik <code>DESTINASI</code>, lalu disaring dengan <code>.filter()</code>.', en:'The place cards are not written by hand in HTML. They are generated from the <code>DESTINASI</code> array, then narrowed with <code>.filter()</code>.'},
+    kode:'function tampilkan(){\n  const kata = input.value.toLowerCase();\n  const hasil = DESTINASI.filter(d =&gt;\n    (wilayahAktif === "semua" || d.wilayah === wilayahAktif) &amp;&amp;\n    d.nama[bahasa].toLowerCase().includes(kata)\n  );\n  grid.innerHTML = hasil.map(buatKartu).join("");\n}' },
+  { judul:{id:'Kuis: menyimpan keadaan di dalam variabel', en:'The quiz: keeping state in variables'},
+    isi:{id:'Kuis hanya butuh dua variabel — nomor soal dan skor. Setiap klik memperbarui keduanya, lalu halaman digambar ulang.', en:'The quiz needs just two variables — the question index and the score. Each click updates both, then the page redraws.'},
+    kode:'let nomor = 0, skor = 0;\n\nfunction jawab(pilihan){\n  const benar = SOAL[nomor].jawaban;\n  if (pilihan === benar) skor++;\n  tampilkanHasil(pilihan, benar);\n}\n\nfunction soalBerikutnya(){\n  nomor++;\n  nomor &lt; SOAL.length ? gambarSoal() : gambarSkor();\n}' }
+];
+
+/* =========================================================================
+   D. KEADAAN HALAMAN (state)
+   Catatan untuk anggota ekskul: kalau kamu menjalankan file ini di
+   komputer sendiri, pilihan bahasa & tema bisa diingat browser dengan
+   localStorage. Contohnya:
+       localStorage.setItem('bahasa', bahasa);
+       const tersimpan = localStorage.getItem('bahasa') || 'id';
+   ========================================================================= */
+let bahasa = 'id';
+let wilayahAktif = 'semua';
+let nomorSoal = 0;
+let skor = 0;
+let sudahJawab = false;
+
+const $  = (s, induk = document) => induk.querySelector(s);
+const $$ = (s, induk = document) => [...induk.querySelectorAll(s)];
+
+/* ---------- E. TEMA GELAP / TERANG ------------------------------------ */
+const html = document.documentElement;
+$('#themeBtn').addEventListener('click', () => {
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+});
+// Ikuti pengaturan sistem saat pertama kali dibuka
+if (window.matchMedia('(prefers-color-scheme: dark)').matches) html.dataset.theme = 'dark';
+
+/* ---------- F. GANTI BAHASA ------------------------------------------- */
+function terapkanBahasa(){
+  const kamus = TEKS[bahasa];
+
+  $$('[data-i18n]').forEach(el => {
+    const t = kamus[el.dataset.i18n];
+    if (t !== undefined) el.innerHTML = t;
+  });
+  $$('[data-i18n-placeholder]').forEach(el => {
+    const t = kamus[el.dataset.i18nPlaceholder];
+    if (t !== undefined) el.placeholder = t;
+  });
+  $$('[data-i18n-aria]').forEach(el => {
+    const t = kamus[el.dataset.i18nAria];
+    if (t !== undefined) el.setAttribute('aria-label', t);
+  });
+
+  html.lang = bahasa;
+  $$('.lang button').forEach(b => b.classList.toggle('is-active', b.dataset.lang === bahasa));
+
+  // Bagian yang isinya dibuat JavaScript harus digambar ulang
+  gambarChips();
+  gambarDestinasi();
+  gambarAkordeon();
+  gambarKuis();
+  mulaiTicker();
+}
+
+$$('.lang button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.lang === bahasa) return;
+    bahasa = btn.dataset.lang;
+    terapkanBahasa();
+  });
+});
+
+/* ---------- G. NAVBAR, PROGRES, TOMBOL KE ATAS ------------------------ */
+const navEl = $('#nav'), progressEl = $('#progress'), toTopEl = $('#toTop');
+const bagian = $$('main section[id]');
+
+function saatGulir(){
+  const y = window.scrollY;
+  navEl.classList.toggle('is-stuck', y > 40);
+  toTopEl.classList.toggle('is-shown', y > 700);
+
+  const tinggi = document.body.scrollHeight - window.innerHeight;
+  progressEl.style.width = (tinggi > 0 ? (y / tinggi) * 100 : 0) + '%';
+
+  // Tandai menu yang sedang dibaca
+  let aktif = bagian[0]?.id;
+  bagian.forEach(s => { if (y >= s.offsetTop - 140) aktif = s.id; });
+  $$('.nav__links a').forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === '#' + aktif));
+}
+window.addEventListener('scroll', saatGulir, { passive:true });
+
+toTopEl.addEventListener('click', () => window.scrollTo({ top:0, behavior:'smooth' }));
+
+const burger = $('#burger'), navLinks = $('#navLinks');
+burger.addEventListener('click', () => {
+  const buka = navLinks.classList.toggle('is-open');
+  burger.classList.toggle('is-open', buka);
+  burger.setAttribute('aria-expanded', buka);
+});
+$$('.nav__links a').forEach(a => a.addEventListener('click', () => {
+  navLinks.classList.remove('is-open');
+  burger.classList.remove('is-open');
+  burger.setAttribute('aria-expanded', 'false');
+}));
+
+/* ---------- H. ANIMASI SAAT DIGULIR ----------------------------------- */
+const pengamat = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting){ e.target.classList.add('is-visible'); pengamat.unobserve(e.target); }
+  });
+}, { threshold:.15 });
+$$('.reveal').forEach(el => pengamat.observe(el));
+
+/* ---------- I. ANGKA YANG MENGHITUNG NAIK ----------------------------- */
+const pengamatAngka = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    hitungNaik(e.target);
+    pengamatAngka.unobserve(e.target);
+  });
+}, { threshold:.4 });
+$$('[data-count]').forEach(el => pengamatAngka.observe(el));
+
+function hitungNaik(el){
+  const target = Number(el.dataset.count);
+  const durasi = 1500;
+  const mulai = performance.now();
+
+  function langkah(waktu){
+    const p = Math.min((waktu - mulai) / durasi, 1);
+    const halus = 1 - Math.pow(1 - p, 3);           // easing: melambat di akhir
+    const nilai = Math.round(target * halus);
+    el.textContent = nilai.toLocaleString(bahasa === 'id' ? 'id-ID' : 'en-US');
+    if (p < 1) requestAnimationFrame(langkah);
+    else if (target > 1000) el.innerHTML = nilai.toLocaleString(bahasa === 'id' ? 'id-ID' : 'en-US') + '<small>+</small>';
+  }
+  requestAnimationFrame(langkah);
+}
+
+/* ---------- J. TICKER FAKTA DI HERO ----------------------------------- */
+let tickerTimer, hapusTimer;
+function mulaiTicker(){
+  clearTimeout(tickerTimer); clearTimeout(hapusTimer);
+  const daftar = FAKTA_TICKER[bahasa];
+  const kotak = $('#tickerText');
+  let i = 0;
+
+  function ketik(){
+    const teks = daftar[i];
+    let n = 0;
+    kotak.textContent = '';
+    (function tulis(){
+      kotak.textContent = teks.slice(0, ++n);
+      if (n < teks.length) tickerTimer = setTimeout(tulis, 32);
+      else hapusTimer = setTimeout(hapus, 2400);
+    })();
+  }
+  function hapus(){
+    let n = kotak.textContent.length;
+    (function kurangi(){
+      kotak.textContent = kotak.textContent.slice(0, --n);
+      if (n > 0) tickerTimer = setTimeout(kurangi, 14);
+      else { i = (i + 1) % daftar.length; tickerTimer = setTimeout(ketik, 260); }
+    })();
+  }
+  ketik();
+}
+
+/* ---------- K. DESTINASI: chips, kartu, pencarian, modal --------------- */
+function gambarChips(){
+  $('#chips').innerHTML = WILAYAH.map(w =>
+    `<button type="button" class="chip ${w.key === wilayahAktif ? 'is-active' : ''}" data-wilayah="${w.key}">${w.label[bahasa]}</button>`
+  ).join('');
+
+  $$('#chips .chip').forEach(c => c.addEventListener('click', () => {
+    wilayahAktif = c.dataset.wilayah;
+    gambarChips();
+    gambarDestinasi();
+  }));
+}
+
+function namaWilayah(key){
+  return (WILAYAH.find(w => w.key === key) || {}).label[bahasa] || key;
+}
+
+function gambarDestinasi(){
+  const kata = $('#searchInput').value.trim().toLowerCase();
+
+  const hasil = DESTINASI.filter(d => {
+    const cocokWilayah = wilayahAktif === 'semua' || d.wilayah === wilayahAktif;
+    const cocokKata = !kata
+      || d.nama[bahasa].toLowerCase().includes(kata)
+      || d.singkat[bahasa].toLowerCase().includes(kata);
+    return cocokWilayah && cocokKata;
+  });
+
+  $('#destEmpty').classList.toggle('hidden', hasil.length > 0);
+
+  $('#destGrid').innerHTML = hasil.map(d => `
+    <button type="button" class="card chart-frame" data-id="${d.id}">
+      <span class="card__banner" style="background:linear-gradient(135deg, ${d.warna[0]}, ${d.warna[1]})">
+        <span class="card__emoji">${d.emoji}</span>
+      </span>
+      <span class="card__body">
+        <span class="card__region">${namaWilayah(d.wilayah)}</span>
+        <h3>${d.nama[bahasa]}</h3>
+        <span class="card__desc">${d.singkat[bahasa]}</span>
+        <span class="card__coord"><span>${d.koordinat}</span><span class="card__more">${TEKS[bahasa]['dest.more']}</span></span>
+      </span>
+    </button>
+  `).join('');
+
+  $$('#destGrid .card').forEach(k => k.addEventListener('click', () => bukaModal(k.dataset.id)));
+}
+
+$('#searchInput').addEventListener('input', gambarDestinasi);
+
+const modal = $('#modal');
+function bukaModal(id){
+  const d = DESTINASI.find(x => x.id === id);
+  if (!d) return;
+
+  $('#modalBanner').style.background = `linear-gradient(135deg, ${d.warna[0]}, ${d.warna[1]})`;
+  $('#modalEmoji').textContent  = d.emoji;
+  $('#modalRegion').textContent = namaWilayah(d.wilayah) + ' · ' + d.koordinat;
+  $('#modalTitle').textContent  = d.nama[bahasa];
+  $('#modalText').textContent   = d.panjang[bahasa];
+  $('#modalFacts').innerHTML    = d.fakta.map(f => `<li><span>${f.k[bahasa]}</span><b>${f.v}</b></li>`).join('');
+
+  modal.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+  $('.modal__close').focus();
+}
+function tutupModal(){
+  modal.classList.remove('is-open');
+  document.body.style.overflow = '';
+}
+$$('[data-close]').forEach(el => el.addEventListener('click', tutupModal));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') tutupModal(); });
+
+/* ---------- L. KUIS ---------------------------------------------------- */
+function gambarKuis(){
+  const soal = SOAL[nomorSoal];
+  const kamus = TEKS[bahasa];
+
+  $('#quizCount').textContent = String(nomorSoal + 1).padStart(2,'0') + ' / ' + String(SOAL.length).padStart(2,'0');
+  $('#quizScore').textContent = kamus['quiz.score'] + ' ' + skor;
+  $('#quizFill').style.width = ((nomorSoal) / SOAL.length) * 100 + '%';
+
+  if (!soal) return gambarSkor();
+
+  $('#quizPlay').classList.remove('hidden');
+  $('#quizDone').classList.add('hidden');
+  $('#quizQ').textContent = soal.q[bahasa];
+  $('#quizNote').classList.add('hidden');
+  $('#quizNext').classList.add('hidden');
+  $('#quizNext').textContent = (nomorSoal === SOAL.length - 1) ? kamus['quiz.finish'] : kamus['quiz.next'];
+
+  $('#quizOpts').innerHTML = soal.opsi[bahasa].map((o, i) =>
+    `<button type="button" class="opt" data-i="${i}"><span class="opt__key">${'ABCD'[i]}</span><span>${o}</span></button>`
+  ).join('');
+
+  $$('#quizOpts .opt').forEach(b => b.addEventListener('click', () => jawab(Number(b.dataset.i))));
+  sudahJawab = false;
+}
+
+function jawab(pilihan){
+  if (sudahJawab) return;
+  sudahJawab = true;
+
+  const soal = SOAL[nomorSoal];
+  if (pilihan === soal.jawaban) skor++;
+
+  $$('#quizOpts .opt').forEach((b, i) => {
+    b.disabled = true;
+    if (i === soal.jawaban) b.classList.add('is-right');
+    else if (i === pilihan) b.classList.add('is-wrong');
+  });
+
+  const nota = $('#quizNote');
+  nota.textContent = soal.nb[bahasa];
+  nota.classList.remove('hidden');
+  $('#quizNext').classList.remove('hidden');
+  $('#quizScore').textContent = TEKS[bahasa]['quiz.score'] + ' ' + skor;
+  $('#quizFill').style.width = ((nomorSoal + 1) / SOAL.length) * 100 + '%';
+}
+
+$('#quizNext').addEventListener('click', () => {
+  nomorSoal++;
+  nomorSoal < SOAL.length ? gambarKuis() : gambarSkor();
+});
+
+function gambarSkor(){
+  const kamus = TEKS[bahasa];
+  $('#quizPlay').classList.add('hidden');
+  $('#quizDone').classList.remove('hidden');
+  $('#finalScore').textContent = skor;
+  $('#quizFill').style.width = '100%';
+  $('#finalMsg').textContent = skor === 5 ? kamus['quiz.r5'] : skor >= 3 ? kamus['quiz.r3'] : kamus['quiz.r0'];
+}
+
+$('#quizRetry').addEventListener('click', () => { nomorSoal = 0; skor = 0; gambarKuis(); });
+
+/* ---------- M. AKORDEON "DI BALIK LAYAR" ------------------------------ */
+function gambarAkordeon(){
+  $('#acc').innerHTML = BALIK_LAYAR.map((b, i) => `
+    <div class="acc__item">
+      <button type="button" class="acc__btn" aria-expanded="false">
+        <span class="acc__idx">${String(i + 1).padStart(2,'0')}</span>
+        <span class="acc__title">${b.judul[bahasa]}</span>
+        <span class="acc__sign"></span>
+      </button>
+      <div class="acc__panel"><div class="acc__inner">
+        <p>${b.isi[bahasa]}</p>
+        <pre><code>${b.kode}</code></pre>
+      </div></div>
+    </div>`).join('');
+
+  $$('#acc .acc__btn').forEach(btn => btn.addEventListener('click', () => {
+    const item = btn.parentElement;
+    const panel = item.querySelector('.acc__panel');
+    const terbuka = item.classList.contains('is-open');
+
+    // Tutup semua dulu, biar hanya satu yang terbuka
+    $$('#acc .acc__item').forEach(it => {
+      it.classList.remove('is-open');
+      it.querySelector('.acc__panel').style.height = '0px';
+      it.querySelector('.acc__btn').setAttribute('aria-expanded','false');
+    });
+
+    if (!terbuka){
+      item.classList.add('is-open');
+      panel.style.height = panel.firstElementChild.offsetHeight + 'px';
+      btn.setAttribute('aria-expanded','true');
+    }
+  }));
+}
+
+/* ---------- N. FORM + VALIDASI + TOAST -------------------------------- */
+const form = $('#ideaForm');
+function tandaiError(input, salah){
+  input.closest('.field').classList.toggle('has-error', salah);
+  return !salah;
+}
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+
+  const nama = $('#fName'), mail = $('#fMail'), ide = $('#fIdea');
+  const okNama = tandaiError(nama, nama.value.trim() === '');
+  const okMail = tandaiError(mail, !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail.value.trim()));
+  const okIde  = tandaiError(ide,  ide.value.trim().length < 10);
+
+  if (!(okNama && okMail && okIde)) return;
+
+  form.reset();
+  tampilkanToast(TEKS[bahasa]['contact.ok']);
+});
+
+// Hilangkan tanda merah begitu pengguna mulai memperbaiki
+$$('#ideaForm input, #ideaForm textarea').forEach(el =>
+  el.addEventListener('input', () => el.closest('.field').classList.remove('has-error'))
+);
+
+let toastTimer;
+function tampilkanToast(pesan){
+  const t = $('#toast');
+  t.textContent = pesan;
+  t.classList.add('is-shown');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('is-shown'), 3200);
+}
+
+/* ---------- O. JALANKAN ------------------------------------------------ */
+$('#yearTag').textContent = new Date().getFullYear();
+terapkanBahasa();
+saatGulir();
+</script>
+</body>
+</html>
